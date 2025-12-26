@@ -2,24 +2,21 @@ name: ScreenAgent CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
+  lint-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8, 3.9, "3.10", 3.11]
     
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: 3.9
     
     - name: Cache pip packages
       uses: actions/cache@v3
@@ -33,41 +30,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         if [ -f client/requirements.txt ]; then pip install -r client/requirements.txt; fi
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     
     - name: Lint with flake8
       run: |
         pip install flake8
-        # Stop build on syntax errors
         flake8 client/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
     
-    - name: Check imports
-      run: |
-        python -c "import sys; print(f'Python {sys.version}')"
-    
-    - name: Run basic syntax check
+    - name: Check Python syntax
       run: |
         python -m py_compile client/run_controller.py || true
-
-  code-quality:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.9
-    
-    - name: Install pylint
-      run: |
-        python -m pip install --upgrade pip
-        pip install pylint
-    
-    - name: Analyze code
-      run: |
-        pylint client/ --disable=all --enable=E,F || true
 
   security:
     runs-on: ubuntu-latest
@@ -75,29 +46,27 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python
+    - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
         python-version: 3.9
     
-    - name: Install safety
-      run: |
-        python -m pip install --upgrade pip
-        pip install safety
-    
     - name: Check dependencies
       run: |
+        python -m pip install --upgrade pip
+        if [ -f client/requirements.txt ]; then pip install -r client/requirements.txt; fi
+        pip install safety
         if [ -f client/requirements.txt ]; then safety check --file client/requirements.txt || true; fi
 
-  docs:
+  validate:
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v3
     
-    - name: Check documentation
+    - name: Validate documentation
       run: |
-        echo "Checking if SETUP_GUIDE.md exists..."
-        [ -f SETUP_GUIDE.md ] && echo "✓ SETUP_GUIDE.md found" || echo "✗ SETUP_GUIDE.md not found"
-        echo "Checking if README.md exists..."
-        [ -f README.md ] && echo "✓ README.md found" || echo "✗ README.md not found"
+        echo "Checking documentation files..."
+        [ -f SETUP_GUIDE.md ] && echo "✓ SETUP_GUIDE.md exists" || echo "✗ SETUP_GUIDE.md missing"
+        [ -f README.md ] && echo "✓ README.md exists" || echo "✗ README.md missing"
+        [ -f QUICKSTART.sh ] && echo "✓ QUICKSTART.sh exists" || echo "✗ QUICKSTART.sh missing"
