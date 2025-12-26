@@ -10,4 +10,4 @@ transitions
 pyparsing
 qasync
 requests
-yaml
+PyYAML
